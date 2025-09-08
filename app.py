@@ -569,4 +569,4 @@ if not st.session_state.messages:
             st.rerun()
     
     with col3:
-        if st.button("⏰ Horarios de Atención", use
+        if st.button("⏰ Horarios de Atención", use_container_width=True):
