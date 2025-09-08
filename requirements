@@ -1,11 +1,2 @@
 streamlit
 openai
-pinecone-client
-sentence-transformers
-langchain
-langchain-openai
-pypdf2
-python-dotenv
-torch
-numpy
-pandas
