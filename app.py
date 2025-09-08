@@ -10,7 +10,7 @@ try:
     from pinecone_client import pinecone_client
     from document_processor import document_processor, create_sample_tupa_documents
 except ImportError as e:
-    st.error(f"❌ Error importando módulos RAG: {e}")
+    st.error(f"Error importando módulos RAG: {e}")
     st.error("Asegúrate de que todos los archivos RAG estén en el directorio")
     st.stop()
 
@@ -29,11 +29,10 @@ st.set_page_config(
 )
 
 # ---------------------------
-# DISEÑO PROFESIONAL (mantenemos el mismo CSS)
+# DISEÑO PROFESIONAL
 # ---------------------------
 st.markdown("""
 <style>
-    /* Reset y variables CSS */
     :root {
         --primary-color: #2563eb;
         --primary-hover: #1d4ed8;
@@ -48,8 +47,6 @@ st.markdown("""
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         --radius: 12px;
-        --radius-sm: 8px;
-        --spacing: 1rem;
     }
 
     .stApp {
@@ -238,7 +235,6 @@ st.markdown("""
     .typing-dot:nth-child(1) { animation-delay: -0.32s; }
     .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 
-    /* Estilos para mostrar fuentes */
     .sources-container {
         background: #f8f9fa;
         border-radius: 8px;
@@ -331,7 +327,6 @@ st.markdown("""
 # FUNCIONES DEL SISTEMA RAG
 # ---------------------------
 def init_session():
-    """Inicializa el estado de la sesión para RAG"""
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "rag_ready" not in st.session_state:
@@ -339,12 +334,10 @@ def init_session():
     if "total_queries" not in st.session_state:
         st.session_state.total_queries = 0
 
-def check_rag_system() -> bool:
-    """Verifica si el sistema RAG está listo"""
+def check_rag_system():
     try:
         if not rag_system:
             return False
-        
         health = rag_system.health_check()
         return health["status"] == "healthy"
     except Exception as e:
@@ -352,25 +345,16 @@ def check_rag_system() -> bool:
         return False
 
 def process_rag_query(user_query: str) -> None:
-    """
-    Procesa una consulta usando el sistema RAG
-    
-    Args:
-        user_query: Pregunta del usuario
-    """
     if not user_query.strip():
         return
     
-    # Verificar que RAG esté disponible
     if not st.session_state.rag_ready:
         st.error("Sistema RAG no disponible. Verifica la configuración.")
         return
     
-    # Agregar mensaje del usuario
     st.session_state.messages.append(("user", user_query))
     st.session_state.total_queries += 1
     
-    # Mostrar indicador de carga
     typing_placeholder = st.empty()
     with typing_placeholder:
         st.markdown("""
@@ -385,13 +369,10 @@ def process_rag_query(user_query: str) -> None:
         """, unsafe_allow_html=True)
     
     try:
-        # Procesar con RAG
         rag_response: RAGResponse = rag_system.query(user_query)
         typing_placeholder.empty()
         
-        # Agregar respuesta del asistente
         st.session_state.messages.append(("assistant", rag_response.answer, rag_response))
-        
         logger.info(f"Consulta procesada en {rag_response.processing_time:.2f}s")
         
     except Exception as e:
@@ -404,14 +385,10 @@ def process_rag_query(user_query: str) -> None:
         ))
 
 def render_message_with_sources(role: str, message: str, rag_response: Optional[RAGResponse] = None):
-    """Renderiza mensaje con fuentes cuando corresponde"""
     with st.chat_message(role):
         st.markdown(message)
         
-        # Mostrar fuentes y confianza para respuestas del asistente
         if role == "assistant" and rag_response and rag_response.sources:
-            
-            # Medidor de confianza
             confidence_percent = int(rag_response.confidence * 100)
             confidence_color = "#28a745" if rag_response.confidence > 0.7 else "#ffc107" if rag_response.confidence > 0.4 else "#dc3545"
             
@@ -425,7 +402,6 @@ def render_message_with_sources(role: str, message: str, rag_response: Optional[
                 </div>
             """, unsafe_allow_html=True)
             
-            # Mostrar fuentes
             with st.expander(f"📚 Fuentes consultadas ({len(rag_response.sources)})"):
                 for i, source in enumerate(rag_response.sources, 1):
                     st.markdown(f"""
@@ -437,17 +413,12 @@ def render_message_with_sources(role: str, message: str, rag_response: Optional[
                     """, unsafe_allow_html=True)
 
 def setup_sample_data():
-    """Configura datos de ejemplo en Pinecone"""
     try:
-        # Obtener estadísticas actuales
         stats = pinecone_client.get_index_stats()
         
         if stats.get('total_vectors', 0) == 0:
             with st.spinner("Configurando datos de ejemplo del TUPA..."):
-                # Crear documentos de ejemplo
                 sample_docs = create_sample_tupa_documents()
-                
-                # Subirlos a Pinecone
                 success = pinecone_client.upsert_documents(sample_docs)
                 
                 if success:
@@ -465,15 +436,13 @@ def setup_sample_data():
 # ---------------------------
 init_session()
 
-# Barra de estado
 st.markdown('<div class="status-bar"><div class="status-active"></div></div>', unsafe_allow_html=True)
 
-# Sidebar con información RAG
+# Sidebar
 with st.sidebar:
     st.header("🤖 Sistema RAG TUPA")
     st.divider()
     
-    # Estado del sistema
     st.subheader("📊 Estado del Sistema")
     
     if st.session_state.rag_ready:
@@ -497,44 +466,28 @@ with st.sidebar:
     
     st.divider()
     
-    # Estadísticas de sesión
     st.subheader("📈 Estadísticas")
     st.metric("Consultas realizadas", st.session_state.total_queries)
     st.metric("Mensajes en chat", len(st.session_state.messages))
     
     st.divider()
     
-    # Controles
     st.subheader("⚙️ Controles")
     
     if st.button("🔄 Nueva Conversación", use_container_width=True, type="primary"):
         st.session_state.messages = []
         st.rerun()
     
-    # Configurar datos de ejemplo
     if st.button("📚 Configurar Datos Ejemplo", use_container_width=True):
         setup_sample_data()
-    
-    # Admin: Limpiar índice (solo en desarrollo)
-    if not rag_config.openai_api_key.startswith("sk-proj"):  # Evitar en producción
-        if st.button("🗑️ Limpiar Índice", use_container_width=True, help="Solo para desarrollo"):
-            if st.session_state.get('confirm_delete'):
-                pinecone_client.delete_all_vectors()
-                st.success("Índice limpiado")
-                st.session_state.confirm_delete = False
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.session_state.confirm_delete = True
-                st.warning("Presiona nuevamente para confirmar")
 
-# Verificar si RAG está listo
+# Verificar RAG
 if not st.session_state.rag_ready:
     st.error("❌ Sistema RAG no está disponible. Verifica tu configuración de Pinecone y OpenAI.")
     st.info("💡 Asegúrate de tener configuradas las variables: PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY")
     st.stop()
 
-# Cabecera mínima cuando hay mensajes
+# Header cuando hay mensajes
 if st.session_state.messages:
     st.markdown("""
         <div class="mini-header">
@@ -543,7 +496,7 @@ if st.session_state.messages:
         </div>
     """, unsafe_allow_html=True)
 
-# Hero section (solo cuando no hay mensajes)
+# Hero section
 if not st.session_state.messages:
     st.markdown("""
         <div class="hero-section">
@@ -570,3 +523,38 @@ if not st.session_state.messages:
     
     with col3:
         if st.button("⏰ Horarios de Atención", use_container_width=True):
+            process_rag_query("¿Cuáles son los horarios de atención de las oficinas?")
+            st.rerun()
+    
+    with col4:
+        if st.button("💰 Tasas y Costos", use_container_width=True):
+            process_rag_query("¿Cuánto cuesta un certificado de zonificación?")
+            st.rerun()
+
+# Chat container
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+
+# Mostrar mensajes
+for i, message_data in enumerate(st.session_state.messages):
+    if len(message_data) == 3:
+        role, message, rag_response = message_data
+        render_message_with_sources(role, message, rag_response)
+    else:
+        role, message = message_data
+        render_message_with_sources(role, message)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Input del chat
+if prompt := st.chat_input("Pregunta sobre procedimientos del TUPA..."):
+    process_rag_query(prompt)
+    st.rerun()
+
+# Footer
+if st.session_state.messages:
+    st.markdown("""
+        <div class="footer">
+            🏛️ Gobierno Regional del Cusco • Asistente TUPA RAG<br>
+            <small>Powered by Pinecone + OpenAI</small>
+        </div>
+    """, unsafe_allow_html=True)
